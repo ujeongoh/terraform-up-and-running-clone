@@ -35,16 +35,29 @@ data "aws_availability_zones" "this" {
   state = "available"
 }
 
-resource "aws_instance" "app" {
+resource "aws_instance" "example" {
   instance_type     = "t2.micro"
   availability_zone = data.aws_availability_zones.this.names[0]
   ami               = data.aws_ami.this.id
+  vpc_security_group_ids = [aws_security_group.instance.id]
   user_data = <<-EOF
               #!/bin/bash
-              sudo service apache2 start
+              echo "Hello, World" > index.html
+              nohup busybox httpd -f -p 8080 &
               EOF
+  user_data_replace_on_change = true
   tags = {
     Name = "terraform-example"
   }
 }
 
+resource "aws_security_group" "instance" {
+  name        = "terraform-example-instance"
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
